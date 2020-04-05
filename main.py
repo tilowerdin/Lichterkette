@@ -62,41 +62,54 @@ def setValue(key, value):
 
 if __name__ == '__main__':
     initGPIO()
+    try: 
+        print("start workerThread")
+        workerThread = MyThread()
+        workerThread.start()
 
-    workerThread = MyThread()
-    workerThread.start()
+        
+        # create an INET, STREAMing socket
+        print("create socket")
+        serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # bind the socket to a public host, and a well-known port
+        print(f"bind socket to port {_PORT}")
+        serversocket.bind((socket.gethostname(), _PORT))
+        # become a server socket
+        print("listen to socket")
+        serversocket.listen(5)
 
-    # create an INET, STREAMing socket
-    serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    # bind the socket to a public host, and a well-known port
-    serversocket.bind((socket.gethostname(), _PORT))
-    # become a server socket
-    serversocket.listen(5)
+        while True:
+            # accept one connection from outside
+            print("accept connections")
+            (clientsocket, address) = serversocket.accept()
+            # now do something with the clientsocket
+            # in this case, we'll pretend this is a threaded server
+            print(f"got a connection {address}")
 
-    while True:
-        # accept one connection from outside
-        (clientsocket, address) = serversocket.accept()
-        # now do something with the clientsocket
-        # in this case, we'll pretend this is a threaded server
-        print(f"got a connection {address}")
+            print("trying to receive message")
+            msg = clientsocket.recv(2048).decode()
+            print(f"got message: {msg}")
 
-        msg = clientsocket.recv(2048).decode()
-        print(f"got message: {msg}")
+            print("trying to send message")
+            clientsocket.send("got your message".encode())
 
-        clientsocket.send("got your message".encode())
+            print("close connection to client")
+            clientsocket.close()
 
-        print("close connection to client")
-        clientsocket.close()
+            print("set value")
+            if msg == "close":
+                setValue("close", True)
+                workerThread.join()
+                break
 
-        if msg == "close":
-            setValue("close", True)
-            workerThread.join()
-            break
+            setValue(23, not VALUES[23])
 
-        setValue(23, not VALUES[23])
+    finally:
+        setValue("close", True)
+        workerThread.join()
 
-    print(f"cleaning up")
-    serversocket.close()
+        print(f"cleaning up")
+        serversocket.close()
 
-    cleanupGPIO()
+        cleanupGPIO()
 
