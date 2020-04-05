@@ -29,8 +29,8 @@ def sendToServer(msg):
 if __name__ == "__main__":
     args = sys.argv
     print(args)
-    if (len(args) > 1) and ("close" in args):
-        sendToServer("close")
+    if (len(args) > 1):
+        sendToServer(args[1])
     else:
         sendToServer("Hallo Welt!")
 

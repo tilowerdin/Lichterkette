@@ -5,12 +5,21 @@ import threading
 
 _PORT = 2345
 
-CHANGECV = threading.Condition()
+# Abwechselnd Zeit an, Zeit aus, ...
+MUSTER = {
+    'on': (1, [(True,-1)]),
+    'off': (1, [(False,-1)]),
+    'blink': (-1, [(False,1),(True,1)])
+}
+
+CHANGECV = {
+    23 : threading.Condition()
+}
 CHANGED = list()
 VALUES = {
-    "close" : False,
-    23 : False
+    23 : (1, [(0, -1)])
 }
+STOP = False
 
 def initGPIO():
     print(f"setmode to BCM and setup GPIO 23 to OUT")
@@ -35,39 +44,70 @@ def toggle(pin, value):
 
 class MyThread(threading.Thread):
 
+    def __init__(self, lightId):
+        threading.Thread.__init__(self)
+        self.__id = lightId
+        self.__task = MUSTER['off']
+        self.__progress = self.__task[1].copy()
+        self.__count = self.__task[0]
+
+
     def run(self):
-        global CHANGED, CHANGECV, VALUES
+        global CHANGECV, VALUES, STOP
         while True:
-            myList = []
-            with CHANGECV:
-                while len(CHANGED) == 0:
-                    CHANGECV.wait()
-                myList = CHANGED
-                CHANGED = []
+            with CHANGECV[self.__id]:
+                if STOP:
+                    break
 
-            if "close" in myList:
-                break
+                if self.__id in CHANGED:
+                    CHANGED.remove(self.__id)
+                    self.__task = VALUES[self.__id]
+                    self.__progress = self.__task[1].copy()
+                    self.__count = self.__task[0]
 
-            for pin in myList:
-                toggle(pin, VALUES[pin])
+            if self.__count == 0:
+                off(self.__id)
+                with CHANGECV[self.__id]:
+                    while not (self.__id in CHANGED):
+                        CHANGECV[self.__id].wait()
+            else:
+                self.__count = max(-1, self.__count-1)
+                if len(self.__progress) == 0:
+                    self.__progress = self.__task[1].copy()
+                task = self.__progress.pop(0)
+                toggle(self.__id, task[0])
+                with CHANGECV[self.__id]:
+                    if task[1] == -1:
+                        CHANGECV[self.__id].wait()
+                    else:
+                        CHANGECV[self.__id].wait(task[1])
 
 def setValue(key, value):
     global CHANGED, CHANGECV, VALUES
-    with CHANGECV:
+    with CHANGECV[key]:
         VALUES[key] = value
         CHANGED.append(key)
-        CHANGECV.notify()
-    
+        CHANGECV[key].notifyAll()
+
+def stopAll():
+    global STOP
+    STOP = True
+    for key in CHANGECV:
+        with CHANGECV[key]:
+            CHANGECV[key].notifyAll()
 
 
 if __name__ == '__main__':
     initGPIO()
-    try: 
-        print("start workerThread")
-        workerThread = MyThread()
-        workerThread.start()
 
-        
+    print("start workerThread")
+    pins = [23]
+    workerThreads = {}
+    for pin in pins:
+        workerThreads[pin] = MyThread(pin)
+        workerThreads[pin].start()
+
+    try: 
         # create an INET, STREAMing socket
         print("create socket")
         serversocket = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
@@ -99,15 +139,22 @@ if __name__ == '__main__':
 
             print("set value")
             if msg == "close":
-                setValue("close", True)
-                workerThread.join()
+                stopAll()
+                for pin in pins:
+                    workerThreads[pin].join()
                 break
 
-            setValue(23, not VALUES[23])
+            if msg == 'on':
+                setValue(23, MUSTER['on'])
+            elif msg == 'blink':
+                setValue(23, MUSTER['blink'])
+            else:
+                setValue(23, MUSTER['off'])
 
     finally:
-        setValue("close", True)
-        workerThread.join()
+        stopAll()
+        for pin in pins:
+            workerThreads[pin].join()
 
         print(f"cleaning up")
         serversocket.close()
