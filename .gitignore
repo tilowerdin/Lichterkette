@@ -1,6 +1,8 @@
 
 
 RPi/
+*.png
+client.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
