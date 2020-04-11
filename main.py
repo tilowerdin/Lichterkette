@@ -110,7 +110,7 @@ if __name__ == '__main__':
     try: 
         # create an INET, STREAMing socket
         print("create socket")
-        serversocket = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+        serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         serversocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         # bind the socket to a public host, and a well-known port
         print(f"bind socket to port {_PORT}")

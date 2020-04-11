@@ -6,7 +6,7 @@ _PORT = 2345
 
 def sendToServer(msg):
     # create an INET, STREAMing socket
-    s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     
     print("trying to connect")
     # s.connect((socket.gethostname(), _PORT))
