@@ -4,6 +4,8 @@ import socket
 import threading
 
 _PORT = 2345
+_HOSTNAME = ''
+_MESSAGE_LEN = 4096
 
 # Abwechselnd Zeit an, Zeit aus, ...
 MUSTER = {
@@ -114,7 +116,7 @@ if __name__ == '__main__':
         serversocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         # bind the socket to a public host, and a well-known port
         print(f"bind socket to port {_PORT}")
-        serversocket.bind((socket.gethostname(), _PORT))
+        serversocket.bind((_HOSTNAME, _PORT))
         # become a server socket
         print("listen to socket")
         serversocket.listen(5)
@@ -128,7 +130,7 @@ if __name__ == '__main__':
             print(f"got a connection {address}")
 
             print("trying to receive message")
-            msg = clientsocket.recv(2048).decode()
+            msg = clientsocket.recv(_MESSAGE_LEN).decode()
             print(f"got message: {msg}")
 
             print("trying to send message")

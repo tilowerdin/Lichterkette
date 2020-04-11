@@ -2,15 +2,17 @@ import socket
 import sys
 
 _PORT = 2345
+_MESSAGE_LEN = 4096
 
 
 def sendToServer(msg):
+    global _PORT, _MESSAGE_LEN
     # create an INET, STREAMing socket
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     
     print("trying to connect")
     # s.connect((socket.gethostname(), _PORT))
-    s.connect(('raspberrypi', _PORT))
+    s.connect(('192.168.8.103', _PORT))
     print("connected")
 
     print("trying to send message")
@@ -18,7 +20,7 @@ def sendToServer(msg):
     print("send message")
 
     print("trying to receive message")
-    msg = s.recv(2048).decode()
+    msg = s.recv(_MESSAGE_LEN).decode()
     print(f"got answer: {msg}")
 
     print("cleanup")
